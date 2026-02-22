@@ -7,7 +7,6 @@ An app that provides users with local businesses in their area and allows then t
 - Sql database usage
 - Good Ui/Ux design
 
-
 # Goals
 - Rest Api integration
 - Uses a real encrypted sql database
