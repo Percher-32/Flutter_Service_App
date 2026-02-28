@@ -11,8 +11,11 @@ An app that provides users with local businesses in their area and allows then t
 - Rest Api integration
 - Uses a real encrypted sql database
 - Monetization through ads
+- Subscription service for the business 
 - 2 apps - Client and Owner-side
+- 1000 users
 
 
 # CHALLENGE
 FINISH THIS IN 2 Years which is <b> 22nd Feb 2028
+
