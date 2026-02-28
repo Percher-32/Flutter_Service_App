@@ -17,6 +17,7 @@ supabase = supabase.create_client(url, key)
 bussiness_database_name = "[Beta]Business"
 bussiness_location_database_name = "[Beta]Business_Location"
 user_database_name = "[Beta]User"
+service_database_name = "[Beta]Services"
 
 
 
@@ -45,17 +46,14 @@ def add_bussines(user_name,name,website = None,email = None,links = None,locatio
         
     add_business_location(bussines_id,loc_data)
     
-    supabase.table(user_database_name).update({"Business_Id":bussines_id}).eq("username",user_name).execute()
-    supabase.table(user_database_name).update({"type":"Owner"}).eq("username",user_name).execute()
+    supabase.table(user_database_name).update({"Business_Id":bussines_id}).eq("email",user_name).execute()
+    supabase.table(user_database_name).update({"type":"Owner"}).eq("email",user_name).execute()
     
     
     print(f"Sent {bussiness_database_name} Data : \n{response.data}\n")
     
     return response
 
-
-
-    
 def add_business_location(business_id,location:tuple):
     data = {
         "Business_Id":business_id,
@@ -70,8 +68,41 @@ def add_business_location(business_id,location:tuple):
     
     print(f"Sent {bussiness_location_database_name} Data : \n{response.data}\n")
 
+def get_services_from_business(business_id):
+    resp = supabase.table(service_database_name).select("id").eq("business_id",business_id).execute()
+    
+    return resp.data
+    
+
+
+
+def add_service_to_business(business_id,name:str,pay_type = "PayOnDay",gotoloc = 1,customaddons = {},scheduled = 0):
+    data = {
+        "business_id":business_id,
+        "Name":name,
+        "Pay_type":pay_type,
+        "GotoLoc":gotoloc,
+        "Custom_Addons":customaddons,
+        "Scheduled?" : scheduled
+    }
+    
+    
+    reponse = supabase.table(service_database_name).insert(data).execute()
+    
+    return reponse
+
+
+    
+    
+    
+    
+
+
+
+
+
 def get_user_data(user_name):
-    response = supabase.table(user_database_name).select("*").eq("username", user_name).execute()
+    response = supabase.table(user_database_name).select("*").eq("email", user_name).execute()
     
     hex_data = response.data[0]["Location"]
     
@@ -86,12 +117,10 @@ def get_user_data(user_name):
     else:
         return False
     
-    
-def add_user(user_name:str,password:str,type = "User",email = None,full_name = None,business_id = None,location : tuple = None):
+def add_user(email:str,password:str,type = "User",full_name = None,business_id = None,location : tuple = None):
     if location == None:
         location = (0,0)
     data = {
-        "username":user_name,
         "hashword" : get_password_hash(password),
         "type" : type,
         "email":email,
@@ -106,22 +135,40 @@ def add_user(user_name:str,password:str,type = "User",email = None,full_name = N
     
     print(response.data)
     
-def add_service_done(user_name,service_id):
-    data = get_user_data(user_name)
+    return response.data[0]
+    
+def add_completed_service_to_user(user_data,service_id):
+    data = user_data
+    email = data["email"]
     
     all_serivices : list = data["Services_Done"]
     
     all_serivices.append(service_id)
     
     
-    supabase.table(user_database_name).update({"Services_Done":all_serivices}).eq("username",user_name).execute()
-    
-    
+    supabase.table(user_database_name).update({"Services_Done":all_serivices}).eq("email",email).execute()
 
+def add_new_favorite_service_to_user(user_data,service_id):
+    data = user_data
     
-# add_user("Lincoln","ABC123",location=myloc)
-add_service_done("Lincoln",45)
-# add_bussines("Lincoln","LR studios",website="www.Lincoln.org.uk",email="Aroundtheworld@gmail.com")
+    email = data["email"]
+    
+    all_serivices : list = data["Favorite_Services"]
+    
+    all_serivices.append(service_id)
+    
+    
+    supabase.table(user_database_name).update({"Favorite_Services":all_serivices}).eq("email",email).execute()
+    
+    
+    
+if __name__ == "__main__":
+    busid = get_user_data("Lincoln2@gmail.com")["Business_Id"]
+    # add_service_to_business(busid,"Burger8")
+    # add_service_to_business(busid,"Burger3")
+    # add_service_to_business(busid,"Burger4")
+    # add_service_to_business(busid,"Burger5")
+    print(get_services_from_business(business_id=busid))
 
 
 

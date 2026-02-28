@@ -1,4 +1,5 @@
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status,Header
+from typing import Annotated
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from datetime import datetime, timedelta
@@ -31,14 +32,27 @@ class TokenData(BaseModel):
 
 
 class User(BaseModel):
-    username: str
     email: str | None = None
     Full_Name: str |  None = None
     disabled: bool |  None = None
     type : str 
-    Business_Id : str
-    Location : Coordinate
+    Business_Id : int | None = None
+    Location : list
     Services_Done : list
+    Favorite_Services : list
+    
+    
+class Fake_Auth:
+    def __init__(self,username,password):
+        self.username = username
+        self.password = password
+    
+class UserSignup(BaseModel):
+    username: str 
+    password: str
+    location : list
+    email : str
+    type : str
     
 
 class UserInDB(User):
@@ -50,16 +64,16 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 app = FastAPI()
 
 
-def get_user(db, username: str):
+def get_user( username: str):
     """create a UserInDB basemodel from a username"""
     user_data = get_user_data(username)
     if user_data:
         return UserInDB(**user_data)
 
 
-def authenticate_user(db, username: str, password: str):
+def authenticate_user( username: str, password: str):
     """Returns a UserInDB basemodel from username if password is correct"""
-    user = get_user(db, username)
+    user = get_user(username)
     if not user:
         return False
     if not verify_password(password, user.hashword):
@@ -70,7 +84,7 @@ def authenticate_user(db, username: str, password: str):
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     """
-    Cretates the acces token for when you login\n
+    Cretates a jwt token token for when you login\n
     returns an encoded jwt dict with the data and the exp date
     """
     to_encode = data.copy()
@@ -98,7 +112,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credential_exception
 
-    user = get_user(db, username=token_data.username)
+    user = get_user( username=token_data.username)
     if user is None:
         raise credential_exception
 
@@ -116,18 +130,31 @@ async def get_current_active_user(current_user: UserInDB = Depends(get_current_u
 @app.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     """
-    Cretaes the token object based on the OAuthRequestform type \n
+    Cretaes the jwt token object based on the OAuthRequestform type \n
     Only creates user if the password in the requet is valid for the user
     """
-    user = authenticate_user(db, form_data.username, form_data.password)
+    user = authenticate_user( form_data.username, form_data.password)
     if user:
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
+        access_token = create_access_token(data={"sub": user.email}, expires_delta=access_token_expires)
         return {"access_token": access_token, "token_type": "bearer"}
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Incorrect username or password", headers={"WWW-Authenticate": "Bearer"})
 
+
+
+
+@app.post("/LoginPage",response_model=Token)
+async def Login_New_User(email : str,password : Annotated[str, Header()],location : list[float],user_type:str = "User",full_name:str = None):
+    try:
+        add_user(email=email,password=password,type=user_type,full_name=full_name,location=location)
+        
+
+        return {"message": "sucessful", "email" : email}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
 
 @app.get("/users/me/", response_model=User)
 async def read_users_me(current_user: User = Depends(get_current_active_user)):
