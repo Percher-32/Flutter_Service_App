@@ -1,9 +1,11 @@
 import supabase
 import json
-from urllib.request import urlopen
 from pydantic import BaseModel
 import geopy
 import geocoder
+from hashcode import *
+from shapely import wkb
+
 
 url: str = "http://127.0.0.1:54321"
 key: str = "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH"
@@ -15,6 +17,10 @@ supabase = supabase.create_client(url, key)
 bussiness_database_name = "[Beta]Business"
 bussiness_location_database_name = "[Beta]Business_Location"
 user_database_name = "[Beta]User"
+
+
+
+myloc = geocoder.ip('me').latlng
 
 
 
@@ -33,18 +39,22 @@ def add_bussines(user_name,name,website = None,email = None,links = None,locatio
     
     
     if location == None:
-        loc_data = geocoder.ip('me').latlng
+        loc_data = (0,0)
     else:
         loc_data = location
         
     add_business_location(bussines_id,loc_data)
     
-    response = supabase.table(user_database_name).update({"Business_Id":bussines_id}).eq({"username":user_name}).execute()
+    supabase.table(user_database_name).update({"Business_Id":bussines_id}).eq("username",user_name).execute()
+    supabase.table(user_database_name).update({"type":"Owner"}).eq("username",user_name).execute()
     
     
     print(f"Sent {bussiness_database_name} Data : \n{response.data}\n")
     
-    return bussines_id
+    return response
+
+
+
     
 def add_business_location(business_id,location:tuple):
     data = {
@@ -62,20 +72,32 @@ def add_business_location(business_id,location:tuple):
 
 def get_user_data(user_name):
     response = supabase.table(user_database_name).select("*").eq("username", user_name).execute()
+    
+    hex_data = response.data[0]["Location"]
+    
+    if not hex_data == None:
+        point = wkb.loads(hex_data, hex=True)
+        loclist = list(point.coords[0])
+        response.data[0]["Location"] = loclist
+
+    
     if len(response.data) :
         return response.data[0]
     else:
         return False
     
     
-def add_user(user_name:str,hashword:str,type = "User",email = None,full_name = None,business_id = None):
+def add_user(user_name:str,password:str,type = "User",email = None,full_name = None,business_id = None,location : tuple = None):
+    if location == None:
+        location = (0,0)
     data = {
         "username":user_name,
-        "hashword" : hashword,
+        "hashword" : get_password_hash(password),
         "type" : type,
         "email":email,
         "Full_Name":full_name,
-        "Business_Id":business_id
+        "Business_Id":business_id,
+        "Location" : f"POINT({location[0]} {location[1]})"
     }
     
     
@@ -84,17 +106,27 @@ def add_user(user_name:str,hashword:str,type = "User",email = None,full_name = N
     
     print(response.data)
     
+def add_service_done(user_name,service_id):
+    data = get_user_data(user_name)
+    
+    all_serivices : list = data["Services_Done"]
+    
+    all_serivices.append(service_id)
+    
+    
+    supabase.table(user_database_name).update({"Services_Done":all_serivices}).eq("username",user_name).execute()
+    
+    
 
     
-    
-# add_user("Marty","LALALALGA",email="nogat@gmail.com")
-ans = get_user_data("Martyx")
+# add_user("Lincoln","ABC123",location=myloc)
+add_service_done("Lincoln",45)
+# add_bussines("Lincoln","LR studios",website="www.Lincoln.org.uk",email="Aroundtheworld@gmail.com")
 
-print(ans)
-    
-    
-    
-    
+
+
+# ax = get_user_data("Lincoln")
+
 
 
 

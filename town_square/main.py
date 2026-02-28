@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from pydantic_extra_types.coordinate import Coordinate
 from Databse_Code import *
 
 SECRET_KEY = "83daa0256a2289b0fb23693bf1f6034d44396675749244721a2b20e896e11662"
@@ -36,25 +37,17 @@ class User(BaseModel):
     disabled: bool |  None = None
     type : str 
     Business_Id : str
+    Location : Coordinate
+    Services_Done : list
+    
 
 class UserInDB(User):
     hashword: str
 
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 app = FastAPI()
-
-
-def verify_password(plain_password, hashed_password):
-    """check if inpututed and saved passwrod are equal"""
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def get_password_hash(password):
-    """hash a pasword"""
-    return pwd_context.hash(password)
 
 
 def get_user(db, username: str):
