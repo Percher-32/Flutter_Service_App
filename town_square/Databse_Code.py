@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import geopy
 import geocoder
 from hashcode import *
+import random
 from shapely import wkb
 
 
@@ -164,11 +165,9 @@ def add_new_favorite_service_to_user(user_data,service_id):
     
 if __name__ == "__main__":
     busid = get_user_data("Lincoln2@gmail.com")["Business_Id"]
-    # add_service_to_business(busid,"Burger8")
-    # add_service_to_business(busid,"Burger3")
-    # add_service_to_business(busid,"Burger4")
-    # add_service_to_business(busid,"Burger5")
-    print(get_services_from_business(business_id=busid))
+    for i in range(50):
+        add_business_location(busid,(random.random() * 50,random.random() * 50))
+    # print(get_services_from_business(business_id=busid))
 
 
 
